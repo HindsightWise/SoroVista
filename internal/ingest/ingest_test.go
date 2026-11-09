@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/sorotrail/sorovista/internal/rpc"
+	"github.com/sorotrail/sorovista/internal/source"
 	"github.com/sorotrail/sorovista/internal/store"
 )
 
@@ -345,4 +346,30 @@ func TestNextCursorFallsBackToPagingToken(t *testing.T) {
 	t.Run("no events yields no cursor", func(t *testing.T) {
 		assert.Empty(t, nextCursor(rpc.GetEventsResult{}))
 	})
+}
+
+type recordingPublisher struct {
+	events []string
+}
+
+func (r *recordingPublisher) Publish(e []source.Event) {
+	for _, ev := range e {
+		r.events = append(r.events, ev.ID)
+	}
+}
+
+func TestPollOncePublishesDecodedEventsToBroker(t *testing.T) {
+	client := &mockRPC{
+		latest: 100,
+		responses: []rpc.GetEventsResult{
+			{Events: []rpc.Event{event("0000000100-0000000001", 100, "CABC")}, LatestLedger: 100},
+		},
+	}
+	st := newMockStore()
+	pub := &recordingPublisher{}
+
+	ing := newTestIngester(client, st, Options{RetentionLedgers: 50}).WithPublisher(pub)
+	require.NoError(t, ing.pollOnce(context.Background()))
+
+	assert.Equal(t, []string{"0000000100-0000000001"}, pub.events)
 }
