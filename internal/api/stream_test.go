@@ -104,17 +104,21 @@ func TestEventStreamSubscriberReceivesMatchingEventsAndDisconnectCleansUp(t *tes
 
 	// Read until we see the data line for the matching event.
 	var idLine, eventLine, dataLine string
+	// The label is load-bearing: a bare break inside the switch would leave the
+	// switch rather than the loop, and the read would never stop.
+readLoop:
 	for {
 		line, err := reader.ReadString('\n')
 		require.NoError(t, err)
 		line = strings.TrimRight(line, "\r\n")
-		if strings.HasPrefix(line, "id: ") {
+		switch {
+		case strings.HasPrefix(line, "id: "):
 			idLine = strings.TrimPrefix(line, "id: ")
-		} else if strings.HasPrefix(line, "event: ") {
+		case strings.HasPrefix(line, "event: "):
 			eventLine = strings.TrimPrefix(line, "event: ")
-		} else if strings.HasPrefix(line, "data: ") {
+		case strings.HasPrefix(line, "data: "):
 			dataLine = strings.TrimPrefix(line, "data: ")
-			break
+			break readLoop
 		}
 	}
 

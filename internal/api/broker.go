@@ -17,11 +17,11 @@ const DefaultSubscriberBufferSize = 256
 // Broker fans out newly ingested events to active SSE subscribers whose
 // filters match. A nil *Broker is safe: all methods no-op.
 type Broker struct {
-	mu           sync.RWMutex
-	subscribers  map[int64]*subscriber
-	nextID       int64
-	bufSize      int
-	closed       bool
+	mu          sync.RWMutex
+	subscribers map[int64]*subscriber
+	nextID      int64
+	bufSize     int
+	closed      bool
 }
 
 type subscriber struct {

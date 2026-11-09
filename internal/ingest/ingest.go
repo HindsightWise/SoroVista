@@ -43,11 +43,11 @@ type EventPublisher interface {
 
 // Ingester polls the RPC and persists what it finds.
 type Ingester struct {
-	rpc       rpc.Client
-	store     store.Store
-	decoder   decode.Decoder
-	opts      Options
-	log       *slog.Logger
+	rpc     rpc.Client
+	store   store.Store
+	decoder decode.Decoder
+	opts    Options
+	log     *slog.Logger
 	// metrics is optional instrumentation; nil-safe, see internal/metrics.
 	metrics   *metrics.Metrics
 	publisher EventPublisher
