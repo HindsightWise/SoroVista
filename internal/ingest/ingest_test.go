@@ -373,4 +373,3 @@ func TestPollOncePublishesDecodedEventsToBroker(t *testing.T) {
 
 	assert.Equal(t, []string{"0000000100-0000000001"}, pub.events)
 }
-
