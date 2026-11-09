@@ -67,6 +67,30 @@ curl -N 'http://localhost:8080/api/events/stream?contract_id=CDLZFC3SYJYDZT7K67V
 - Clients that disconnect or are dropped for backpressure can catch up without gaps by querying `GET /api/events` with a `cursor` or `from_ledger`.
 - **Upstream mode (`SOURCE_MODE=sorotrail`):** Because upstream mode has no local ingester, `GET /api/events/stream` explicitly returns `501 Not Implemented` rather than holding open a silent stream.
 
+### `GET /api/events/buckets` and `GET /api/contracts/{id}/buckets`
+Aggregate event counts into contiguous half-open `[start, end)` time buckets over a `[from, to)` RFC3339 timestamp range.
+
+- **Timestamp bucketed:** `ledger_closed_at` (the on-chain ledger close time, not `created_at` ingest time, so backfilled history is placed at its true on-chain time).
+- **Half-open boundaries:** Each bucket covers `[start, end)` (`start <= ledger_closed_at < end`). An event whose `ledger_closed_at` equals a bucket boundary lands in the bucket starting at that boundary; an event at `to` is excluded.
+- **Empty buckets:** Quiet intervals within `[from, to)` are returned with `"count": 0` rather than omitted.
+- **Bounds & cap:** `interval` defaults to `1h` and accepts durations between `1m` and `168h` (`7d`), such as `1m`, `5m`, `15m`, `1h`, `6h`, `1d`. A single request may produce at most `500` buckets (`400 Bad Request` when `(to - from) / interval > 500`).
+- **Upstream mode (`SOURCE_MODE=sorotrail`):** Buckets are derived from the bounded recent-event scan and report `"approximate": true` whenever the scan does not exhaust the upstream history.
+
+**Query parameters:**
+
+| Param | Description |
+|---|---|
+| `from` | Required inclusive lower bound (RFC3339 timestamp) |
+| `to` | Required exclusive upper bound (RFC3339 timestamp) |
+| `interval` | Bucket width (`1m` .. `7d`, default `1h`; max 500 buckets) |
+| `contract_id` | Optional Soroban contract strkey (`GET /api/events/buckets` only) |
+| `type` | Optional `contract`, `system`, or `diagnostic` |
+| `topic` | Optional decoded topic filter (bare symbol or JSON object) |
+
+```bash
+curl 'http://localhost:8080/api/events/buckets?from=2024-01-01T00:00:00Z&to=2024-01-01T06:00:00Z&interval=1h&type=contract'
+```
+
 ## Pagination
 
 List responses include `next_cursor`; pass it back as `cursor` for the next page. A null `next_cursor` means you've reached the end. Treat the cursor as opaque.
